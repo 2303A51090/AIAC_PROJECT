@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AORCHA — Multi-Agent Orchestration System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700;800;900&family=DM+Sans:wght@400;500&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:#04080f;--bg2:#080e1a;--surface:#0c1220;--card:#0f1729;
+  --border:#1a2440;--border2:#243260;
+  --blue:#3b7dff;--cyan:#00d4ff;--green:#00e5a0;--amber:#ffb020;--red:#ff4d6d;--purple:#9d7dff;
+  --text:#c8d8f0;--dim:#4a6080;--bright:#e8f0ff;
+  --exo:'Exo 2',sans-serif;--dm:'DM Sans',sans-serif;--mono:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--dm);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(circle,rgba(59,125,255,.07) 1px,transparent 1px);background-size:32px 32px;pointer-events:none;z-index:0}
+
+/* Pages */
+.page{display:none;position:relative;z-index:1}
+.page.active{display:block;animation:pgIn .3s ease both}
+@keyframes pgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
+
+/* NAV */
+nav{position:sticky;top:0;z-index:100;background:rgba(4,8,15,.88);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0 36px;display:flex;align-items:center;height:60px}
+.nav-brand{display:flex;align-items:center;gap:10px;margin-right:44px;cursor:pointer}
+.nav-hex{width:32px;height:32px;background:linear-gradient(135deg,var(--blue),var(--cyan));clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);display:flex;align-items:center;justify-content:center;font-size:13px}
+.nav-wordmark{font-family:var(--exo);font-weight:900;font-size:.95rem;letter-spacing:.14em;color:var(--bright)}
+.nav-sub{font-size:.52rem;color:var(--dim);letter-spacing:.06em;display:block;margin-top:-3px}
+.nav-links{display:flex;gap:4px;flex:1}
+.nav-btn{padding:7px 18px;border-radius:6px;font-family:var(--exo);font-size:.75rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);cursor:pointer;border:none;background:none;transition:all .2s}
+.nav-btn:hover{color:var(--text);background:rgba(59,125,255,.08)}
+.nav-btn.active{color:var(--cyan);background:rgba(0,212,255,.08);border-bottom:2px solid var(--cyan)}
+.nav-right{display:flex;align-items:center;gap:10px;margin-left:auto}
+.sys-badge{display:flex;align-items:center;gap:7px;padding:5px 13px;border-radius:20px;background:rgba(0,229,160,.07);border:1px solid rgba(0,229,160,.2);font-family:var(--mono);font-size:.6rem;color:var(--green)}
+.pdot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+.ver{font-family:var(--mono);font-size:.6rem;padding:4px 10px;border-radius:4px;background:var(--surface);border:1px solid var(--border);color:var(--dim)}
+
+/* TICKER */
+.ticker{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(4,8,15,.95);border-top:1px solid var(--border);height:28px;overflow:hidden;display:flex;align-items:center}
+.ticker-lbl{padding:0 14px;font-family:var(--exo);font-size:.58rem;font-weight:700;letter-spacing:.12em;color:var(--blue);border-right:1px solid var(--border);white-space:nowrap;flex-shrink:0;text-transform:uppercase}
+.ticker-track{display:flex;animation:tick 38s linear infinite;white-space:nowrap}
+.ticker-track:hover{animation-play-state:paused}
+.t-item{font-family:var(--mono);font-size:.6rem;color:var(--dim);padding:0 28px 0 0}
+.t-item span{color:var(--cyan)}
+@keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* SHARED */
+.wrap{max-width:1200px;margin:0 auto;padding:0 40px}
+.pg-wrap{padding:44px 40px 64px;max-width:1200px;margin:0 auto}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;font-family:var(--exo);font-size:.62rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase}
+.pill-g{background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.25);color:var(--green)}
+.pill-c{background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.25);color:var(--cyan)}
+.pill-b{background:rgba(59,125,255,.1);border:1px solid rgba(59,125,255,.25);color:var(--blue)}
+.pill-a{background:rgba(255,176,32,.1);border:1px solid rgba(255,176,32,.25);color:var(--amber)}
+.pill-r{background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.25);color:var(--red)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px}
+.card-h{padding:13px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-t{font-family:var(--exo);font-size:.62rem;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--dim)}
+.card-b{padding:20px}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 22px;border-radius:8px;font-family:var(--exo);font-weight:700;font-size:.78rem;letter-spacing:.05em;cursor:pointer;border:none;transition:all .2s}
+.btn-p{background:linear-gradient(135deg,var(--blue),var(--cyan));color:#fff;box-shadow:0 0 18px rgba(59,125,255,.3)}
+.btn-p:hover{transform:translateY(-2px);box-shadow:0 0 28px rgba(59,125,255,.5)}
+.btn-g{background:transparent;color:var(--cyan);border:1px solid rgba(0,212,255,.3)}
+.btn-g:hover{background:rgba(0,212,255,.08)}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
+.cnt-badge{font-family:var(--mono);font-size:.58rem;padding:2px 8px;border-radius:10px;background:var(--surface);border:1px solid var(--border);color:var(--dim)}
+
+/* ═══ HOME ═══ */
+#pg-home{min-height:calc(100vh - 60px - 28px)}
+.hero{position:relative;padding:88px 40px 72px;text-align:center;overflow:hidden}
+#heroCanvas{position:absolute;inset:0;width:100%;height:100%;opacity:.5;pointer-events:none}
+.hero-c{position:relative;z-index:2;max-width:740px;margin:0 auto}
+.hero-eye{font-family:var(--mono);font-size:.68rem;color:var(--cyan);letter-spacing:.16em;text-transform:uppercase;margin-bottom:18px;display:flex;align-items:center;justify-content:center;gap:10px}
+.hero-eye::before,.hero-eye::after{content:'';display:block;width:36px;height:1px;background:currentColor;opacity:.45}
+.hero h1{font-family:var(--exo);font-weight:900;font-size:clamp(2rem,5vw,3.6rem);line-height:1.06;letter-spacing:-.02em;color:var(--bright);margin-bottom:20px}
+.hero h1 .ac{background:linear-gradient(135deg,var(--blue) 20%,var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero p{font-size:1rem;color:var(--dim);line-height:1.72;max-width:560px;margin:0 auto 34px}
+.hero-acts{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.stat-bar{display:flex;justify-content:center;border:1px solid var(--border);border-radius:12px;background:rgba(12,18,32,.82);backdrop-filter:blur(8px);margin:52px auto 0;max-width:700px;overflow:hidden}
+.sb{flex:1;padding:18px 14px;text-align:center;border-right:1px solid var(--border)}
+.sb:last-child{border-right:none}
+.sb-n{font-family:var(--exo);font-weight:900;font-size:1.55rem;color:var(--cyan);display:block}
+.sb-l{font-size:.62rem;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin-top:2px}
+
+.feat-sec{padding:68px 40px;max-width:1200px;margin:0 auto}
+.sec-lbl{font-family:var(--exo);font-size:.62rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--blue);margin-bottom:10px}
+.sec-h{font-family:var(--exo);font-weight:800;font-size:clamp(1.4rem,3vw,2.1rem);color:var(--bright);letter-spacing:-.02em;margin-bottom:12px}
+.sec-p{font-size:.88rem;color:var(--dim);max-width:480px;line-height:1.72;margin-bottom:44px}
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.fc{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:26px;transition:all .3s;cursor:default;position:relative;overflow:hidden}
+.fc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;opacity:0;transition:opacity .3s}
+.fc:hover{border-color:var(--border2);transform:translateY(-3px);box-shadow:0 10px 35px rgba(0,0,0,.4)}
+.fc:hover::before{opacity:1}
+.fc1::before{background:linear-gradient(90deg,var(--blue),var(--cyan))}
+.fc2::before{background:linear-gradient(90deg,var(--amber),var(--red))}
+.fc3::before{background:linear-gradient(90deg,var(--green),var(--cyan))}
+.fc-ico{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px;margin-bottom:16px}
+.ico-b{background:rgba(59,125,255,.14);border:1px solid rgba(59,125,255,.22)}
+.ico-a{background:rgba(255,176,32,.14);border:1px solid rgba(255,176,32,.22)}
+.ico-g{background:rgba(0,229,160,.14);border:1px solid rgba(0,229,160,.22)}
+.fc h3{font-family:var(--exo);font-weight:700;font-size:.92rem;color:var(--bright);margin-bottom:9px}
+.fc p{font-size:.8rem;color:var(--dim);line-height:1.65}
+
+.hiw-sec{padding:68px 40px;max-width:1200px;margin:0 auto}
+.hiw{display:flex;gap:0;position:relative;margin-top:44px}
+.hiw::before{content:'';position:absolute;top:27px;left:28px;right:28px;height:1px;background:linear-gradient(90deg,var(--border),var(--border2),var(--border))}
+.hiw-step{flex:1;text-align:center;padding:0 14px;animation:fadeUp .5s ease both}
+.step-circ{width:54px;height:54px;border-radius:50%;background:var(--card);border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;font-family:var(--exo);font-weight:900;font-size:.95rem;color:var(--cyan);margin:0 auto 16px;position:relative;z-index:1;transition:all .3s}
+.hiw-step:hover .step-circ{border-color:var(--cyan);background:rgba(0,212,255,.1);box-shadow:0 0 18px rgba(0,212,255,.28)}
+.step-t{font-family:var(--exo);font-weight:700;font-size:.8rem;color:var(--text);margin-bottom:7px}
+.step-d{font-size:.71rem;color:var(--dim);line-height:1.6}
+
+.cta-wrap{margin:32px 40px 64px;max-width:1120px;margin-left:auto;margin-right:auto}
+.cta-banner{border:1px solid var(--border2);border-radius:16px;background:linear-gradient(135deg,rgba(59,125,255,.08),rgba(0,212,255,.05));padding:44px 52px;display:flex;align-items:center;justify-content:space-between;gap:28px;position:relative;overflow:hidden}
+.cta-banner::before{content:'';position:absolute;right:-70px;top:-70px;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(0,212,255,.1),transparent 70%);pointer-events:none}
+.cta-banner h2{font-family:var(--exo);font-weight:800;font-size:1.55rem;color:var(--bright);letter-spacing:-.02em;margin-bottom:6px}
+.cta-banner p{font-size:.86rem;color:var(--dim)}
+
+/* ═══ DASHBOARD ═══ */
+.metric-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}
+.mc{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:19px;transition:border-color .3s}
+.mc:hover{border-color:var(--border2)}
+.mc-lbl{font-family:var(--exo);font-size:.58rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:8px}
+.mc-val{font-family:var(--exo);font-weight:900;font-size:1.9rem;color:var(--bright);line-height:1;margin-bottom:6px}
+.mc-sub{font-size:.68rem;color:var(--dim)}
+.trend-up{color:var(--green);font-family:var(--mono);font-size:.63rem}
+.trend-dn{color:var(--red);font-family:var(--mono);font-size:.63rem}
+
+.dash-main{display:grid;grid-template-columns:1fr 370px;gap:18px;margin-bottom:20px}
+.gauge-stack{display:flex;flex-direction:column;gap:18px;padding:18px}
+.gauge-item .g-row{display:flex;justify-content:space-between;margin-bottom:6px;font-size:.65rem}
+.g-name{color:var(--dim);font-family:var(--exo);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.g-val{font-family:var(--mono);color:var(--text);font-weight:600}
+.g-track{height:5px;border-radius:3px;background:var(--border);overflow:hidden}
+.g-fill{height:100%;border-radius:3px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+.gf-b{background:linear-gradient(90deg,var(--blue),var(--cyan))}
+.gf-p{background:linear-gradient(90deg,var(--purple),var(--blue))}
+.gf-g{background:linear-gradient(90deg,var(--green),var(--cyan))}
+.g-sub{font-size:.58rem;color:var(--dim);margin-top:4px;font-family:var(--mono)}
+
+.spark-wrap{padding:4px 0 14px}
+.spark-lbl-row{display:flex;justify-content:space-between;padding:0 20px;margin-bottom:10px}
+.spark-lbl{font-size:.63rem;color:var(--dim);font-family:var(--mono)}
+svg.spark{width:100%;height:58px;overflow:visible}
+
+.tasks-tbl{width:100%;border-collapse:collapse}
+.tasks-tbl th{font-family:var(--exo);font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);padding:9px 15px;text-align:left;border-bottom:1px solid var(--border)}
+.tasks-tbl td{padding:10px 15px;font-size:.71rem;border-bottom:1px solid rgba(26,36,64,.5)}
+.tasks-tbl tr:hover td{background:rgba(59,125,255,.04)}
+.tasks-tbl tr:last-child td{border-bottom:none}
+.t-id{font-family:var(--mono);color:var(--blue);font-size:.63rem}
+.t-task{color:var(--text);max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t-dur{font-family:var(--mono);color:var(--amber)}
+.t-time{font-family:var(--mono);color:var(--dim);font-size:.6rem}
+
+.agent-pool{display:flex;flex-direction:column;gap:8px;padding:14px 18px}
+.agent-row{display:flex;align-items:center;gap:11px;padding:10px 13px;border-radius:8px;background:rgba(12,18,32,.6);border:1px solid var(--border);transition:border-color .3s}
+.agent-row:hover{border-color:var(--border2)}
+.a-icon{width:33px;height:33px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;background:rgba(59,125,255,.1);border:1px solid rgba(59,125,255,.18)}
+.a-info{flex:1}.a-name{font-family:var(--exo);font-weight:600;font-size:.73rem;color:var(--bright)}
+.a-meta{font-size:.6rem;color:var(--dim);margin-top:2px;font-family:var(--mono)}
+.a-health{text-align:right;flex-shrink:0}
+.hb-wrap{width:56px;height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:5px;margin-left:auto}
+.hb-fill{height:100%;border-radius:2px;background:var(--green);transition:width 1s ease}
+
+/* ═══ ORCHESTRATOR ═══ */
+.orch-hdr{padding:22px 40px 0;display:flex;align-items:center;justify-content:space-between}
+.orch-h1{font-family:var(--exo);font-weight:800;font-size:1.35rem;color:var(--bright);letter-spacing:-.01em}
+.orch-sub{font-size:.73rem;color:var(--dim);margin-top:3px}
+.orch-grid{display:grid;grid-template-columns:292px 1fr 252px;gap:14px;padding:14px 40px 24px;height:calc(100vh - 60px - 28px - 82px);min-height:540px}
+.op{background:var(--card);border:1px solid var(--border);border-radius:12px;display:flex;flex-direction:column;overflow:hidden}
+.op-h{padding:11px 17px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.op-t{font-family:var(--exo);font-size:.62rem;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--dim)}
+.op-b{flex:1;overflow-y:auto;padding:14px}
+.op-b::-webkit-scrollbar{width:3px}
+.op-b::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+.orch-inp{display:flex;flex-direction:column;gap:9px;margin-bottom:18px}
+.orch-inp label{font-size:.6rem;color:var(--dim);font-family:var(--exo);text-transform:uppercase;letter-spacing:.08em}
+.orch-inp textarea{background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:.73rem;padding:11px;resize:none;height:86px;outline:none;transition:border-color .2s}
+.orch-inp textarea:focus{border-color:var(--blue)}
+.run-btn{background:linear-gradient(135deg,var(--blue),var(--cyan));color:#fff;border:none;border-radius:8px;font-family:var(--exo);font-weight:700;font-size:.78rem;padding:10px;cursor:pointer;letter-spacing:.04em;transition:all .2s;width:100%}
+.run-btn:hover{opacity:.88;transform:translateY(-1px)}
+.run-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.sub-lbl{font-family:var(--exo);font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:9px}
+
+.sc{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:9px 11px;display:flex;align-items:center;gap:9px;margin-bottom:7px;transition:border-color .2s;animation:fadeUp .3s ease both}
+.sc.running{border-color:var(--blue)}
+.sc.done{border-color:var(--green)}
+.sc-ico{font-size:.95rem;flex-shrink:0}
+.sc-inf{flex:1;min-width:0}
+.sc-name{font-size:.7rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--exo)}
+.sc-role{font-size:.58rem;color:var(--dim);margin-top:2px;font-family:var(--mono)}
+.pchip{font-size:.56rem;padding:2px 6px;border-radius:8px;font-family:var(--mono);flex-shrink:0}
+.ph{background:rgba(0,229,160,.12);color:var(--green);border:1px solid rgba(0,229,160,.22)}
+.pm{background:rgba(255,176,32,.12);color:var(--amber);border:1px solid rgba(255,176,32,.22)}
+.pl{background:rgba(74,96,128,.18);color:var(--dim);border:1px solid var(--border)}
+.sdot{width:6px;height:6px;border-radius:50%;background:var(--dim);flex-shrink:0}
+.sdot.running{background:var(--blue);animation:pulse 1s infinite}
+.sdot.done{background:var(--green)}
+
+.le{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid rgba(26,36,64,.45);animation:fadeUp .2s ease both;font-size:.68rem}
+.le-ts{color:var(--dim);font-family:var(--mono);font-size:.57rem;flex-shrink:0;padding-top:1px;min-width:56px}
+.le-tag{flex-shrink:0;font-family:var(--exo);font-size:.56rem;font-weight:700;padding:1px 6px;border-radius:3px;height:fit-content;letter-spacing:.04em;text-transform:uppercase}
+.tg-o{background:rgba(59,125,255,.15);color:var(--blue)}
+.tg-b{background:rgba(255,176,32,.15);color:var(--amber)}
+.tg-gr{background:rgba(0,229,160,.14);color:var(--green)}
+.tg-c{background:rgba(157,125,255,.14);color:var(--purple)}
+.tg-e{background:rgba(0,212,255,.1);color:var(--cyan)}
+.tg-d{background:rgba(0,229,160,.09);color:var(--green)}
+.tg-s{background:rgba(74,96,128,.18);color:var(--dim)}
+.le-msg{color:var(--text);line-height:1.5;flex:1;word-break:break-word}
+.log-empty{text-align:center;padding:44px 14px;color:var(--dim);font-size:.73rem}
+.log-big{font-size:2rem;margin-bottom:9px;opacity:.35}
+
+.res-item{margin-bottom:15px}
+.res-row{display:flex;justify-content:space-between;margin-bottom:5px;font-size:.62rem}
+.res-n{color:var(--dim);font-family:var(--exo);text-transform:uppercase;letter-spacing:.06em}
+.res-v{font-family:var(--mono);color:var(--text);font-weight:600}
+.res-t{height:5px;border-radius:3px;background:var(--border);overflow:hidden}
+.res-f{height:100%;border-radius:3px;transition:width .7s cubic-bezier(.4,0,.2,1)}
+.ctr-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 11px;margin-bottom:6px;animation:fadeUp .25s ease both}
+.ctr-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px}
+.ctr-id{font-family:var(--mono);font-size:.65rem;color:var(--blue);font-weight:600}
+.ctr-st{font-size:.56rem;padding:2px 6px;border-radius:3px;font-family:var(--exo);font-weight:700}
+.cs-run{background:rgba(0,229,160,.1);color:var(--green)}
+.cs-done{background:rgba(74,96,128,.18);color:var(--dim)}
+.ctr-ag{font-size:.62rem;color:var(--dim);font-family:var(--mono)}
+.res-wrap{background:rgba(0,229,160,.05);border:1px solid rgba(0,229,160,.2);border-radius:10px;padding:14px;margin-top:8px}
+.res-wrap h3{font-family:var(--exo);font-weight:700;font-size:.7rem;color:var(--green);margin-bottom:11px;letter-spacing:.06em;text-transform:uppercase}
+.res-row2{margin-bottom:9px}
+.res-ag{font-family:var(--exo);font-size:.65rem;font-weight:600;color:var(--cyan);margin-bottom:2px}
+.res-txt{font-size:.67rem;color:var(--text);line-height:1.55;font-family:var(--mono)}
+
+/* ═══ ARCHITECTURE ═══ */
+.arch-grid{display:grid;grid-template-columns:1fr 370px;gap:28px;align-items:start}
+.arch-layers{display:flex;flex-direction:column;gap:10px;margin-top:36px}
+.arch-layer{display:flex;gap:0;border-radius:12px;overflow:hidden;border:1px solid var(--border);animation:fadeUp .4s ease both}
+.arch-lbl{width:170px;flex-shrink:0;padding:18px 16px;display:flex;flex-direction:column;justify-content:center}
+.al-n{font-family:var(--exo);font-weight:700;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px}
+.al-d{font-size:.6rem;color:var(--dim);line-height:1.5}
+.arch-chips{flex:1;border-left:1px solid var(--border);padding:14px 18px;display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.achip{padding:6px 13px;border-radius:20px;font-size:.65rem;font-family:var(--exo);font-weight:600;white-space:nowrap;cursor:default;transition:transform .18s}
+.achip:hover{transform:scale(1.05)}
+.ly-u .arch-lbl{background:rgba(59,125,255,.07)}
+.ly-u .al-n{color:var(--blue)}
+.ly-u .achip{background:rgba(59,125,255,.11);border:1px solid rgba(59,125,255,.22);color:var(--blue)}
+.ly-or .arch-lbl{background:rgba(157,125,255,.07)}
+.ly-or .al-n{color:var(--purple)}
+.ly-or .achip{background:rgba(157,125,255,.11);border:1px solid rgba(157,125,255,.22);color:var(--purple)}
+.ly-ex .arch-lbl{background:rgba(0,212,255,.07)}
+.ly-ex .al-n{color:var(--cyan)}
+.ly-ex .achip{background:rgba(0,212,255,.09);border:1px solid rgba(0,212,255,.22);color:var(--cyan)}
+.ly-cm .arch-lbl{background:rgba(255,176,32,.07)}
+.ly-cm .al-n{color:var(--amber)}
+.ly-cm .achip{background:rgba(255,176,32,.09);border:1px solid rgba(255,176,32,.22);color:var(--amber)}
+.ly-rs .arch-lbl{background:rgba(255,77,109,.07)}
+.ly-rs .al-n{color:var(--red)}
+.ly-rs .achip{background:rgba(255,77,109,.09);border:1px solid rgba(255,77,109,.22);color:var(--red)}
+.ly-st .arch-lbl{background:rgba(0,229,160,.07)}
+.ly-st .al-n{color:var(--green)}
+.ly-st .achip{background:rgba(0,229,160,.09);border:1px solid rgba(0,229,160,.22);color:var(--green)}
+.cmp-tbl{width:100%;border-collapse:collapse}
+.cmp-tbl th{font-family:var(--exo);font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);padding:9px 14px;text-align:left;border-bottom:1px solid var(--border)}
+.cmp-tbl td{padding:10px 14px;font-size:.71rem;border-bottom:1px solid rgba(26,36,64,.5)}
+.cmp-tbl tr:last-child td{border-bottom:none}
+.ck{color:var(--green)}.cx{color:var(--red)}.ct-our{font-family:var(--exo);font-weight:700;color:var(--cyan)}
+.inv-card{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.inv-av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;font-family:var(--exo);flex-shrink:0}
+.inv-n{font-size:.73rem;font-weight:600;color:var(--bright);font-family:var(--exo)}
+.inv-r{font-size:.6rem;color:var(--dim)}
+
+/* ═══ AGENT LAB (Integrated from NexusOrch) ═══ */
+.lab-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:22px}
+.lab-title{font-family:var(--exo);font-weight:800;font-size:1.35rem;color:var(--bright);letter-spacing:-.01em}
+.lab-sub{font-size:.73rem;color:var(--dim);margin-top:3px;line-height:1.6}
+.lab-grid{display:grid;grid-template-columns:1fr 1.1fr;gap:18px;align-items:start}
+.lab-stack{display:flex;flex-direction:column;gap:18px}
+.lab-form{background:rgba(12,18,32,.65);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:18px}
+.lab-form-row{display:grid;grid-template-columns:1fr 110px 110px auto;gap:10px;align-items:end}
+.lab-field{display:flex;flex-direction:column;gap:6px}
+.lab-field label{font-family:var(--exo);font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.lab-field input{background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--dm);font-size:.78rem;padding:10px 12px;outline:none;transition:border-color .2s,box-shadow .2s}
+.lab-field input:focus{border-color:var(--cyan);box-shadow:0 0 0 2px rgba(0,212,255,.08)}
+.lab-actions{display:flex;gap:10px;flex-wrap:wrap}
+.lab-btn{display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border-radius:8px;font-family:var(--exo);font-weight:700;font-size:.73rem;letter-spacing:.04em;cursor:pointer;border:none;transition:all .2s;white-space:nowrap}
+.lab-btn-primary{background:linear-gradient(135deg,var(--blue),var(--cyan));color:#fff}
+.lab-btn-secondary{background:transparent;color:var(--cyan);border:1px solid rgba(0,212,255,.3)}
+.lab-btn-warn{background:transparent;color:var(--amber);border:1px solid rgba(255,176,32,.3)}
+.lab-btn:hover{transform:translateY(-1px);filter:brightness(1.08)}
+.lab-btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.lab-section-title{font-family:var(--exo);font-size:.6rem;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--dim);margin-bottom:11px;display:flex;align-items:center;gap:8px}
+.lab-task-list{display:flex;flex-direction:column;gap:9px;max-height:360px;overflow:auto;padding-right:3px}
+.lab-task{background:rgba(12,18,32,.65);border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:10px;padding:12px 14px;animation:fadeUp .24s ease both}
+.lab-task.running{border-left-color:var(--amber)}
+.lab-task.completed{border-left-color:var(--green)}
+.lab-task-top{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:5px}
+.lab-task-name{font-family:var(--exo);font-weight:700;font-size:.78rem;color:var(--bright)}
+.lab-task-meta{font-family:var(--mono);font-size:.62rem;color:var(--dim);line-height:1.5}
+.lab-mini-track{height:4px;background:var(--border);border-radius:4px;overflow:hidden;margin-top:9px}
+.lab-mini-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--cyan));width:0%;transition:width .4s}
+.lab-task.completed .lab-mini-fill{width:100%;background:linear-gradient(90deg,var(--green),var(--cyan))}
+.lab-task.running .lab-mini-fill{width:55%;animation:labPulseBar 1.2s infinite alternate}
+@keyframes labPulseBar{from{width:35%}to{width:72%}}
+.lab-ledger{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.lab-stat{background:rgba(12,18,32,.65);border:1px solid var(--border);border-radius:10px;padding:13px}
+.lab-stat-l{font-family:var(--exo);font-size:.55rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:5px}
+.lab-stat-v{font-family:var(--exo);font-weight:900;font-size:1.25rem;color:var(--bright)}
+.lab-stat-v span{font-size:.7rem;font-weight:500;color:var(--dim)}
+.lab-resource-track{height:8px;border-radius:8px;background:var(--border);overflow:hidden;margin-top:10px}
+.lab-resource-fill{height:100%;width:100%;background:linear-gradient(90deg,var(--blue),var(--cyan));border-radius:8px;transition:width .4s cubic-bezier(.2,.9,.4,1.1)}
+.lab-bid-status{display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border-radius:20px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.18);font-family:var(--mono);font-size:.62rem;color:var(--cyan)}
+.lab-container-list{min-height:88px;display:flex;flex-wrap:wrap;gap:9px;align-items:flex-start;padding:2px}
+.lab-container-chip{background:rgba(59,125,255,.09);border:1px solid rgba(59,125,255,.25);border-radius:18px;padding:7px 12px;font-family:var(--mono);font-size:.62rem;color:var(--text);display:inline-flex;align-items:center;gap:7px;animation:fadeUp .2s}
+.lab-history-list{max-height:170px;overflow:auto}
+.lab-history-item{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid rgba(26,36,64,.5);font-size:.68rem}
+.lab-history-item:last-child{border-bottom:none}
+.lab-terminal{background:#05080f;border:1px solid var(--border);border-radius:12px;padding:14px;font-family:var(--mono);font-size:.66rem;color:#8bffb0;height:230px;overflow:auto}
+.lab-terminal-line{border-left:2px solid var(--cyan);padding-left:10px;margin-bottom:8px;line-height:1.55;word-break:break-word}
+.lab-note{font-size:.68rem;color:var(--dim);line-height:1.65;margin-top:8px}
+@media (max-width:980px){
+  .lab-grid{grid-template-columns:1fr}
+  .lab-form-row{grid-template-columns:1fr 1fr}
+  .lab-form-row .lab-field:first-child{grid-column:1/-1}
+}
+@media (max-width:620px){
+  .lab-form-row,.lab-ledger{grid-template-columns:1fr}
+  .lab-head{flex-direction:column}
+}
+
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-brand" onclick="go('home')">
+    <div class="nav-hex">⬡</div>
+    <div>
+      <span class="nav-wordmark">AORCHA</span>
+      <span class="nav-sub">SR University · Patent IDF-5</span>
+    </div>
+  </div>
+  <div class="nav-links">
+    <button class="nav-btn active" id="nl-home" onclick="go('home')">Home</button>
+    <button class="nav-btn" id="nl-dashboard" onclick="go('dashboard')">Dashboard</button>
+    <button class="nav-btn" id="nl-orchestrator" onclick="go('orchestrator')">Orchestrator</button>
+    <button class="nav-btn" id="nl-agentlab" onclick="go('agentlab')">Agent Lab</button>
+    <button class="nav-btn" id="nl-architecture" onclick="go('architecture')">Architecture</button>
+  </div>
+  <div class="nav-right">
+    <span class="ver">v1.2.0-mvp</span>
+    <div class="sys-badge"><span class="pdot"></span>System Online</div>
+  </div>
+</nav>
+
+<!-- PAGE: HOME -->
+<div class="page active" id="pg-home">
+  <section class="hero">
+    <canvas id="heroCanvas"></canvas>
+    <div class="hero-c">
+      <div class="hero-eye">Multi-Agent Orchestration System</div>
+      <h1>Isolated AI Agents.<br>At <span class="ac">Unprecedented Scale.</span></h1>
+      <p>Dynamically provision ephemeral containers for every AI agent task — zero context bleed, intelligent resource bidding, automated deadlock resolution.</p>
+      <div class="hero-acts">
+        <button class="btn btn-p" onclick="go('orchestrator')">▶ Try Live Demo</button>
+        <button class="btn btn-g" onclick="go('architecture')">View Architecture →</button>
+      </div>
+    </div>
+    <div class="stat-bar wrap">
+      <div class="sb"><span class="sb-n">5</span><div class="sb-l">Agent Types</div></div>
+      <div class="sb"><span class="sb-n">0ms</span><div class="sb-l">Cross-Agent Bleed</div></div>
+      <div class="sb"><span class="sb-n">P10</span><div class="sb-l">Priority Levels</div></div>
+      <div class="sb"><span class="sb-n" id="heroCount">0</span><div class="sb-l">Tasks Simulated</div></div>
+    </div>
+  </section>
+
+  <section class="feat-sec">
+    <div class="sec-lbl">Core Innovations</div>
+    <div class="sec-h">Built for reliability. Designed for scale.</div>
+    <div class="sec-p">Three foundational pillars that separate AORCHA from shared-environment multi-agent frameworks like LangGraph and CrewAI.</div>
+    <div class="feat-grid">
+      <div class="fc fc1">
+        <div class="fc-ico ico-b">🔒</div>
+        <h3>Ephemeral Container Isolation</h3>
+        <p>Each agent spawns in a freshly provisioned container with its own Linux namespace and cgroup. Failures are contained — a crashed agent can never corrupt siblings.</p>
+      </div>
+      <div class="fc fc2">
+        <div class="fc-ico ico-a">⚡</div>
+        <h3>Priority-Weighted Bidding</h3>
+        <p>Agents compete for CPU, memory, and API tokens through an asynchronous bidding protocol. Critical tasks get resources first — no starvation, no round-robin waste.</p>
+      </div>
+      <div class="fc fc3">
+        <div class="fc-ico ico-g">🔄</div>
+        <h3>Deadlock Auto-Resolution</h3>
+        <p>A state-machine loop monitors wait-for graphs in real time. Circular dependencies are broken automatically via priority injection or synthetic fallback agent paths.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="hiw-sec">
+    <div class="sec-lbl">Workflow</div>
+    <div class="sec-h">From request to result in 5 steps.</div>
+    <div class="hiw">
+      <div class="hiw-step" style="animation-delay:.05s"><div class="step-circ">1</div><div class="step-t">Request Ingested</div><div class="step-d">Orchestrator Gateway parses and validates the incoming user request.</div></div>
+      <div class="hiw-step" style="animation-delay:.1s"><div class="step-circ">2</div><div class="step-t">Task Decomposed</div><div class="step-d">Task Decomposition Engine splits work into typed subtasks with priority scores.</div></div>
+      <div class="hiw-step" style="animation-delay:.15s"><div class="step-circ">3</div><div class="step-t">Containers Spun Up</div><div class="step-d">One ephemeral container per subtask — isolated namespace, fresh state.</div></div>
+      <div class="hiw-step" style="animation-delay:.2s"><div class="step-circ">4</div><div class="step-t">Agents Execute</div><div class="step-d">Agents run in parallel, communicating only through the schema-validated Message Bus.</div></div>
+      <div class="hiw-step" style="animation-delay:.25s"><div class="step-circ">5</div><div class="step-t">Results Aggregated</div><div class="step-d">Outputs collected, containers torn down, resources returned to ledger.</div></div>
+    </div>
+  </section>
+
+  <div class="cta-wrap">
+    <div class="cta-banner">
+      <div>
+        <h2>See it run live.</h2>
+        <p>Submit any task and watch 5 agents spin up, compete for resources, and complete in real time.</p>
+      </div>
+      <button class="btn btn-p" onclick="go('orchestrator')">Open Orchestrator →</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: DASHBOARD -->
+<div class="page" id="pg-dashboard">
+  <div class="pg-wrap">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+      <div>
+        <div style="font-family:var(--exo);font-weight:800;font-size:1.35rem;color:var(--bright);letter-spacing:-.01em">System Dashboard</div>
+        <div style="font-size:.73rem;color:var(--dim);margin-top:3px">Live metrics · Refreshes every 2 seconds</div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <span class="pill pill-g">● Live</span>
+        <button class="btn btn-g" onclick="go('orchestrator')" style="padding:8px 16px;font-size:.73rem">Run Task →</button>
+      </div>
+    </div>
+
+    <div class="metric-row">
+      <div class="mc"><div class="mc-lbl">Tasks Completed</div><div class="mc-val" id="m-tasks">847</div><div class="trend-up" id="m-tasks-tr">↑ +12 this hour</div></div>
+      <div class="mc"><div class="mc-lbl">Active Agents</div><div class="mc-val" id="m-agents">3</div><div class="mc-sub" id="m-agents-s">of 15 pool capacity</div></div>
+      <div class="mc"><div class="mc-lbl">Avg. Latency</div><div class="mc-val" id="m-lat">2.4<span style="font-size:.95rem;font-weight:400">s</span></div><div class="trend-up" id="m-lat-tr">↓ −0.3s vs last hour</div></div>
+      <div class="mc"><div class="mc-lbl">Success Rate</div><div class="mc-val" id="m-succ">98.7<span style="font-size:.95rem;font-weight:400">%</span></div><div class="trend-up">↑ Healthy</div></div>
+    </div>
+
+    <div class="dash-main">
+      <div>
+        <div class="card" style="margin-bottom:18px">
+          <div class="card-h"><span class="card-t">Task Throughput</span><span style="font-family:var(--mono);font-size:.58rem;color:var(--dim)">last 30 samples</span></div>
+          <div class="spark-wrap">
+            <div class="spark-lbl-row"><span class="spark-lbl" id="spk-min">0</span><span class="spark-lbl" id="spk-max">0</span></div>
+            <svg class="spark" id="spkSvg" viewBox="0 0 400 58" preserveAspectRatio="none">
+              <defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#00d4ff" stop-opacity=".4"/><stop offset="100%" stop-color="#00d4ff" stop-opacity="0"/></linearGradient></defs>
+              <path id="spkArea" fill="url(#sg)" d=""/><path id="spkLine" fill="none" stroke="#00d4ff" stroke-width="1.5" d=""/>
+            </svg>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-h"><span class="card-t">Resource Ledger</span><span class="pdot"></span></div>
+          <div class="gauge-stack">
+            <div class="gauge-item"><div class="g-row"><span class="g-name">CPU Pool</span><span class="g-val" style="color:var(--cyan)" id="d-cpu">72%</span></div><div class="g-track"><div class="g-fill gf-b" id="d-cpu-b" style="width:72%"></div></div><div class="g-sub" id="d-cpu-s">28 units available</div></div>
+            <div class="gauge-item"><div class="g-row"><span class="g-name">Memory</span><span class="g-val" style="color:var(--purple)" id="d-mem">55%</span></div><div class="g-track"><div class="g-fill gf-p" id="d-mem-b" style="width:55%"></div></div><div class="g-sub" id="d-mem-s">45 units available</div></div>
+            <div class="gauge-item"><div class="g-row"><span class="g-name">API Tokens</span><span class="g-val" style="color:var(--green)" id="d-tok">88%</span></div><div class="g-track"><div class="g-fill gf-g" id="d-tok-b" style="width:88%"></div></div><div class="g-sub" id="d-tok-s">12 units available</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="overflow:hidden">
+        <div class="card-h"><span class="card-t">Recent Tasks</span><span class="cnt-badge" id="tbl-cnt">10 tasks</span></div>
+        <div style="overflow-y:auto;max-height:420px">
+          <table class="tasks-tbl"><thead><tr><th>ID</th><th>Task</th><th>Status</th><th>Dur.</th><th>Time</th></tr></thead><tbody id="tasksBody"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><span class="card-t">Agent Pool</span><span class="pill pill-g" style="font-size:.56rem;padding:3px 9px">All Healthy</span></div>
+      <div class="agent-pool" id="agentPool"></div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: ORCHESTRATOR -->
+<div class="page" id="pg-orchestrator">
+  <div class="orch-hdr">
+    <div><div class="orch-h1">Live Orchestrator</div><div class="orch-sub">Submit a task — watch agents spin up in isolated containers</div></div>
+    <div style="display:flex;gap:10px;align-items:center"><span class="cnt-badge" id="o-cnt">0 events</span><span class="pill pill-c">SSE Stream</span></div>
+  </div>
+  <div class="orch-grid">
+    <div class="op">
+      <div class="op-h"><span class="op-t">Control</span></div>
+      <div class="op-b">
+        <div class="orch-inp">
+          <label>Task Description</label>
+          <textarea id="taskInput" placeholder="e.g. Analyze Q3 financial report and generate risk summary…"></textarea>
+          <button class="run-btn" id="runBtn" onclick="submitTask()">▶ Run Orchestration</button>
+        </div>
+        <div class="sub-lbl">Agents / Subtasks</div>
+        <div id="subtaskList"></div>
+      </div>
+    </div>
+    <div class="op">
+      <div class="op-h"><span class="op-t">Live Event Log</span><span class="cnt-badge" id="o-logcnt">0 events</span></div>
+      <div class="op-b" id="logPanel"><div class="log-empty"><div class="log-big">🛰️</div>Submit a task to begin. All orchestration events stream here in real time.</div></div>
+    </div>
+    <div class="op">
+      <div class="op-h"><span class="op-t">Resource Ledger</span><span class="pdot"></span></div>
+      <div class="op-b">
+        <div style="margin-bottom:18px">
+          <div class="res-item"><div class="res-row"><span class="res-n">CPU Pool</span><span class="res-v" style="color:var(--cyan)" id="o-cpu">100%</span></div><div class="res-t"><div class="res-f gf-b" id="o-cpu-b" style="width:100%"></div></div></div>
+          <div class="res-item"><div class="res-row"><span class="res-n">Memory</span><span class="res-v" style="color:var(--purple)" id="o-mem">100%</span></div><div class="res-t"><div class="res-f gf-p" id="o-mem-b" style="width:100%"></div></div></div>
+          <div class="res-item"><div class="res-row"><span class="res-n">API Tokens</span><span class="res-v" style="color:var(--green)" id="o-tok">100%</span></div><div class="res-t"><div class="res-f gf-g" id="o-tok-b" style="width:100%"></div></div></div>
+        </div>
+        <div class="sub-lbl">Active Containers</div>
+        <div id="containerList"></div>
+        <div id="finalResult"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: ARCHITECTURE -->
+<div class="page" id="pg-architecture">
+  <div class="pg-wrap">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0">
+      <div>
+        <div style="font-family:var(--exo);font-weight:800;font-size:1.35rem;color:var(--bright);letter-spacing:-.01em">System Architecture</div>
+        <div style="font-size:.73rem;color:var(--dim);margin-top:3px">SR University Patent · IDF-5 · Warangal, Telangana</div>
+      </div>
+      <span class="pill pill-c">Ephemeral Container Model</span>
+    </div>
+
+    <div class="arch-grid">
+      <div>
+        <div style="font-family:var(--exo);font-size:.6rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:2px;margin-top:4px">System Layers (Top → Bottom)</div>
+        <div class="arch-layers">
+          <div class="arch-layer ly-u" style="animation-delay:.05s">
+            <div class="arch-lbl"><div class="al-n">User Layer</div><div class="al-d">Entry point &amp; response</div></div>
+            <div class="arch-chips"><span class="achip">UI / API Client</span><span class="achip">Request Parser</span><span class="achip">Response Renderer</span></div>
+          </div>
+          <div class="arch-layer ly-or" style="animation-delay:.1s">
+            <div class="arch-lbl"><div class="al-n">Orchestration</div><div class="al-d">Control &amp; scheduling</div></div>
+            <div class="arch-chips"><span class="achip">Orchestrator Gateway</span><span class="achip">Task Decomposition</span><span class="achip">Agent Registry</span><span class="achip">Scheduler</span><span class="achip">Response Aggregator</span></div>
+          </div>
+          <div class="arch-layer ly-ex" style="animation-delay:.15s">
+            <div class="arch-lbl"><div class="al-n">Execution</div><div class="al-d">Isolated agent runtime</div></div>
+            <div class="arch-chips"><span class="achip">Ephemeral Container (per task)</span><span class="achip">AI Agent Process</span><span class="achip">Kernel Namespaces / Cgroups</span><span class="achip">Container Lifecycle Mgr</span></div>
+          </div>
+          <div class="arch-layer ly-cm" style="animation-delay:.2s">
+            <div class="arch-lbl"><div class="al-n">Communication</div><div class="al-d">Message-passing layer</div></div>
+            <div class="arch-chips"><span class="achip">Object-Oriented Message Bus</span><span class="achip">Redis / Kafka / RabbitMQ</span><span class="achip">JSON Schema Validator</span><span class="achip">Protocol Buffers</span></div>
+          </div>
+          <div class="arch-layer ly-rs" style="animation-delay:.25s">
+            <div class="arch-lbl"><div class="al-n">Resource Mgmt</div><div class="al-d">Priority bidding</div></div>
+            <div class="arch-chips"><span class="achip">Priority-Weighted Bidder</span><span class="achip">Resource Ledger</span><span class="achip">Deadlock Detector</span><span class="achip">Wait-For Graph Monitor</span></div>
+          </div>
+          <div class="arch-layer ly-st" style="animation-delay:.3s">
+            <div class="arch-lbl"><div class="al-n">Storage</div><div class="al-d">State persistence</div></div>
+            <div class="arch-chips"><span class="achip">PostgreSQL / MongoDB</span><span class="achip">State Persistence Layer</span><span class="achip">Prometheus / Grafana</span><span class="achip">Audit Log</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:6px">
+        <div style="font-family:var(--exo);font-size:.6rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:8px">vs. Existing Systems</div>
+        <div class="card" style="overflow:hidden;margin-bottom:18px">
+          <table class="cmp-tbl">
+            <thead><tr><th>Feature</th><th style="color:var(--dim)">LangGraph / CrewAI</th><th style="color:var(--cyan)">AORCHA</th></tr></thead>
+            <tbody>
+              <tr><td>Agent Isolation</td><td><span class="cx">✗</span> Shared memory</td><td class="ct-our"><span class="ck">✓</span> Ephem. containers</td></tr>
+              <tr><td>Resource Alloc.</td><td><span class="cx">✗</span> FIFO/Round-Robin</td><td class="ct-our"><span class="ck">✓</span> Priority bidding</td></tr>
+              <tr><td>Deadlock Handling</td><td><span class="cx">✗</span> Manual / none</td><td class="ct-our"><span class="ck">✓</span> Auto-resolution</td></tr>
+              <tr><td>Failure Isolation</td><td><span class="cx">✗</span> Cascade failure</td><td class="ct-our"><span class="ck">✓</span> Contained</td></tr>
+              <tr><td>Container Mgmt</td><td><span class="cx">✗</span> Static / manual</td><td class="ct-our"><span class="ck">✓</span> Dynamic spin-up</td></tr>
+              <tr><td>Schema Validation</td><td><span class="cx">✗</span> Free-form calls</td><td class="ct-our"><span class="ck">✓</span> JSON Schema bus</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="font-family:var(--exo);font-size:.6rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:10px">Inventors · SR University</div>
+        <div class="card"><div class="card-b">
+          <div class="inv-card"><div class="inv-av" style="background:rgba(59,125,255,.14);border:1px solid rgba(59,125,255,.2);color:var(--blue)">N</div><div><div class="inv-n">Mr. Naresh Kumar Sripada</div><div class="inv-r">Asst. Professor · CS&amp;AI · Guide</div></div></div>
+          <div class="inv-card"><div class="inv-av" style="background:rgba(0,212,255,.14);border:1px solid rgba(0,212,255,.2);color:var(--cyan)">H</div><div><div class="inv-n">Mr. Harsh Raj Ranjan</div><div class="inv-r">CSE Student</div></div></div>
+          <div class="inv-card"><div class="inv-av" style="background:rgba(0,229,160,.14);border:1px solid rgba(0,229,160,.2);color:var(--green)">A</div><div><div class="inv-n">Mr. A. Anand</div><div class="inv-r">CSE Student</div></div></div>
+          <div class="inv-card" style="margin-bottom:0"><div class="inv-av" style="background:rgba(157,125,255,.14);border:1px solid rgba(157,125,255,.2);color:var(--purple)">V</div><div><div class="inv-n">Mr. CH. Vishwanath Rao</div><div class="inv-r">CSE Student</div></div></div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- PAGE: AGENT LAB -->
+<div class="page" id="pg-agentlab">
+  <div class="pg-wrap">
+    <div class="lab-head">
+      <div>
+        <div class="lab-title">Agent Lab</div>
+        <div class="lab-sub">Custom agent sandbox integrated from the secondary project: add agents, run priority bidding, view isolated containers, and track execution history without leaving the primary AORCHA interface.</div>
+      </div>
+      <div class="lab-actions">
+        <button class="lab-btn lab-btn-primary" id="labDeployBtn">▶ Deploy Agents</button>
+        <button class="lab-btn lab-btn-warn" id="labResetBtn">↻ Reset Lab</button>
+      </div>
+    </div>
+
+    <div class="lab-grid">
+      <div class="card">
+        <div class="card-h">
+          <span class="card-t">Autonomous Agent Pool</span>
+          <span id="labTaskCount" class="cnt-badge">0 agents</span>
+        </div>
+        <div class="card-b">
+          <div class="lab-form">
+            <div class="lab-form-row">
+              <div class="lab-field">
+                <label>Agent Name</label>
+                <input type="text" id="labAgentName" placeholder="e.g. Security Sentinel" autocomplete="off"/>
+              </div>
+              <div class="lab-field">
+                <label>Priority</label>
+                <input type="number" id="labPriority" min="1" max="10" value="5"/>
+              </div>
+              <div class="lab-field">
+                <label>CPU Cores</label>
+                <input type="number" id="labCpuReq" min="0.5" max="5" step="0.5" value="2"/>
+              </div>
+              <button class="lab-btn lab-btn-secondary" id="labAddAgentBtn">＋ Add</button>
+            </div>
+            <div class="lab-note">Agents are sorted by priority. Higher-priority agents receive resources first, while others wait until CPU is available.</div>
+          </div>
+
+          <div class="lab-section-title">⚙ Active Queue</div>
+          <div id="labTaskList" class="lab-task-list"></div>
+        </div>
+      </div>
+
+      <div class="lab-stack">
+        <div class="card">
+          <div class="card-h">
+            <span class="card-t">Resource Ledger & Priority Bidding</span>
+            <span class="lab-bid-status">⚖ <span id="labBiddingState">Idle</span></span>
+          </div>
+          <div class="card-b">
+            <div class="lab-ledger">
+              <div class="lab-stat">
+                <div class="lab-stat-l">Total Cluster</div>
+                <div class="lab-stat-v">8.0 <span>vCPU</span></div>
+              </div>
+              <div class="lab-stat">
+                <div class="lab-stat-l">Available</div>
+                <div class="lab-stat-v"><span id="labAvailCpu">8.0</span> <span>vCPU</span></div>
+              </div>
+              <div class="lab-stat">
+                <div class="lab-stat-l">Containers</div>
+                <div class="lab-stat-v"><span id="labContainerCountNum">0</span> <span>running</span></div>
+              </div>
+            </div>
+            <div class="lab-resource-track"><div id="labCpuFill" class="lab-resource-fill"></div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h">
+            <span class="card-t">Ephemeral Containers</span>
+            <span id="labContainerCount" class="cnt-badge">0 running</span>
+          </div>
+          <div class="card-b">
+            <div id="labContainerList" class="lab-container-list"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h">
+            <span class="card-t">Execution History</span>
+            <span class="cnt-badge">Latest 8</span>
+          </div>
+          <div class="card-b">
+            <div id="labHistoryList" class="lab-history-list"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h">
+            <span class="card-t">Message Bus · Secure Log</span>
+            <span class="pill pill-c" style="font-size:.56rem;padding:3px 9px">Local Simulation</span>
+          </div>
+          <div class="card-b">
+            <div id="labTerminal" class="lab-terminal"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- TICKER -->
+<div class="ticker">
+  <div class="ticker-lbl">⬡ SYS LOG</div>
+  <div class="ticker-track" id="tickerTrack"></div>
+</div>
+
+<script>
+/* ── Router ── */
+const PAGES=['home','dashboard','orchestrator','agentlab','architecture'];
+function go(id){
+  PAGES.forEach(p=>{
+    document.getElementById('pg-'+p).classList.remove('active');
+    document.getElementById('nl-'+p).classList.remove('active');
+  });
+  const pg=document.getElementById('pg-'+id);
+  pg.classList.add('active');
+  document.getElementById('nl-'+id).classList.add('active');
+  window.scrollTo(0,0);
+  if(id==='dashboard'&&!dashDone)initDash();
+}
+
+/* ── Hero Canvas ── */
+(function(){
+  const cv=document.getElementById('heroCanvas');
+  const cx=cv.getContext('2d');
+  let N=[],W,H;
+  function resize(){W=cv.width=cv.offsetWidth;H=cv.height=cv.offsetHeight;}
+  function initN(){N=Array.from({length:26},(_,i)=>({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.35,vy:(Math.random()-.5)*.35,r:1.5+Math.random()*2.2,ph:Math.random()*Math.PI*2,sp:.013+Math.random()*.018,col:Math.random()<.55?'59,125,255':Math.random()<.5?'0,212,255':'0,229,160'}));}
+  function draw(t){
+    cx.clearRect(0,0,W,H);
+    N.forEach(n=>{
+      n.x+=n.vx;n.y+=n.vy;
+      if(n.x<-20)n.x=W+20;if(n.x>W+20)n.x=-20;
+      if(n.y<-20)n.y=H+20;if(n.y>H+20)n.y=-20;
+      const p=.65+.35*Math.sin(t*n.sp+n.ph);
+      N.forEach(m=>{const dx=n.x-m.x,dy=n.y-m.y,d=Math.sqrt(dx*dx+dy*dy);if(d<120&&d>0){cx.beginPath();cx.moveTo(n.x,n.y);cx.lineTo(m.x,m.y);cx.strokeStyle=`rgba(59,125,255,${(1-d/120)*.13})`;cx.lineWidth=.5;cx.stroke();}});
+      cx.beginPath();cx.arc(n.x,n.y,n.r*p,0,Math.PI*2);cx.fillStyle=`rgba(${n.col},${.55*p})`;cx.fill();
+      cx.beginPath();cx.arc(n.x,n.y,n.r*.45,0,Math.PI*2);cx.fillStyle=`rgba(${n.col},1)`;cx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize',()=>{resize();initN();});
+  resize();initN();requestAnimationFrame(draw);
+  let hc=0;setInterval(()=>{hc+=Math.floor(Math.random()*3)+1;document.getElementById('heroCount').textContent=hc;},2100);
+})();
+
+/* ── Ticker ── */
+(function(){
+  const msgs=[
+    ['PARSER','Container ctr-a91f spun up for Parser Agent'],['LEDGER','CPU allocation: 80→60 units (2 agents active)'],
+    ['ORCH','Task decomposed into 5 subtasks sorted by priority score'],['EXEC','Executor Agent completed in 1.84s — 0 errors'],
+    ['CTR','Container ctr-b24e terminated. Resources released.'],['GRANT','Priority P9 bid accepted for Analyzer Agent'],
+    ['BID','Summarizer Agent bids P6 for 20 CPU, 20 MEM'],['SYS','All 5 agents completed. Orchestration: SUCCESS'],
+    ['LEDGER','API tokens: 100→95 (Validator Agent active)'],['CTR','Validator Agent RUNNING in isolated namespace'],
+    ['ORCH','Deadlock scan: no circular dependencies detected'],['EXEC','Parser Agent: schema validated, 7 fields extracted'],
+    ['SYS','Response aggregated. Final result dispatched to user'],['GRANT','Priority P8 bid accepted for Executor Agent'],
+    ['CTR','Container ctr-d73a spun up — kernel namespace isolated'],
+  ];
+  const track=document.getElementById('tickerTrack');
+  const doubled=[...msgs,...msgs];
+  track.innerHTML=doubled.map(([t,m])=>`<span class="t-item"><span>[${t}]</span> ${m} &nbsp;·&nbsp;</span>`).join('');
+})();
+
+/* ── Dashboard ── */
+let dashDone=false;
+const AGENTS=[
+  {name:'Parser Agent',icon:'⚙️',role:'Input validation & schema extraction'},
+  {name:'Analyzer Agent',icon:'🔍',role:'Dependency analysis & planning'},
+  {name:'Executor Agent',icon:'⚡',role:'Core task execution'},
+  {name:'Validator Agent',icon:'✅',role:'Output verification & QA'},
+  {name:'Summarizer Agent',icon:'📋',role:'Result aggregation & formatting'},
+];
+const MOCK=[
+  {id:'a3f1b2',task:'Analyze Q3 financial report',st:'completed',dur:'3.2s',t:'09:14'},
+  {id:'c7d91e',task:'Summarize medical literature',st:'completed',dur:'4.1s',t:'09:11'},
+  {id:'e2a5f8',task:'Generate risk assessment',st:'completed',dur:'2.9s',t:'09:08'},
+  {id:'b9c3a1',task:'Process user feedback batch',st:'completed',dur:'5.3s',t:'09:03'},
+  {id:'f0e7d4',task:'Validate API schema changes',st:'completed',dur:'1.8s',t:'08:57'},
+  {id:'a1b2c3',task:'Code review automation',st:'completed',dur:'6.2s',t:'08:51'},
+  {id:'d4e5f6',task:'Market sentiment analysis',st:'failed',dur:'2.1s',t:'08:44'},
+  {id:'g7h8i9',task:'Incident log classification',st:'completed',dur:'3.7s',t:'08:38'},
+  {id:'j1k2l3',task:'Compliance report generation',st:'completed',dur:'4.9s',t:'08:30'},
+  {id:'m4n5o6',task:'Performance benchmarking',st:'running',dur:'—',t:'09:16'},
+];
+function spill(s){
+  if(s==='completed')return'<span class="pill pill-g" style="font-size:.53rem;padding:2px 8px">✓ Done</span>';
+  if(s==='running')return'<span class="pill pill-c" style="font-size:.53rem;padding:2px 8px">● Running</span>';
+  return'<span class="pill pill-r" style="font-size:.53rem;padding:2px 8px">✗ Failed</span>';
+}
+let sparkD=Array.from({length:30},()=>Math.floor(Math.random()*16)+3);
+let dCpu=72,dMem=55,dTok=88,taskCnt=847,lat=2.4;
+function rw(v,mn,mx,s){return Math.max(mn,Math.min(mx,v+(Math.random()-.5)*s*2));}
+function initDash(){
+  dashDone=true;
+  document.getElementById('tasksBody').innerHTML=MOCK.map(t=>`<tr><td><span class="t-id">#${t.id}</span></td><td class="t-task">${t.task}</td><td>${spill(t.st)}</td><td class="t-dur">${t.dur}</td><td class="t-time">${t.t}</td></tr>`).join('');
+  document.getElementById('agentPool').innerHTML=AGENTS.map(a=>`<div class="agent-row"><div class="a-icon">${a.icon}</div><div class="a-info"><div class="a-name">${a.name}</div><div class="a-meta">${a.role}</div></div><div class="a-health"><span class="pill pill-g" style="font-size:.53rem;padding:2px 8px">Healthy</span><div class="hb-wrap"><div class="hb-fill" id="hb-${a.name.replace(/\s/g,'')}" style="width:92%"></div></div></div></div>`).join('');
+  updateSparkline();
+  setInterval(updateDash,2000);
+}
+function updateDash(){
+  taskCnt+=Math.floor(Math.random()*3);
+  lat=+rw(lat,1.4,4.8,.3).toFixed(1);
+  const ag=Math.floor(Math.random()*5);
+  document.getElementById('m-tasks').textContent=taskCnt;
+  document.getElementById('m-agents').textContent=ag;
+  document.getElementById('m-lat').innerHTML=lat+'<span style="font-size:.95rem;font-weight:400">s</span>';
+  dCpu=Math.round(rw(dCpu,28,92,5));dMem=Math.round(rw(dMem,33,82,4));dTok=Math.round(rw(dTok,48,98,6));
+  [['cpu',dCpu,'d-cpu','d-cpu-b','d-cpu-s'],['mem',dMem,'d-mem','d-mem-b','d-mem-s'],['tok',dTok,'d-tok','d-tok-b','d-tok-s']].forEach(([_,v,vi,bi,si])=>{
+    document.getElementById(vi).textContent=v+'%';
+    document.getElementById(bi).style.width=v+'%';
+    document.getElementById(si).textContent=(100-v)+' units available';
+  });
+  AGENTS.forEach(a=>{const h=Math.floor(Math.random()*12)+86;const e=document.getElementById('hb-'+a.name.replace(/\s/g,''));if(e)e.style.width=h+'%';});
+  sparkD.push(Math.floor(Math.random()*16)+3);sparkD.shift();
+  updateSparkline();
+}
+function updateSparkline(){
+  const W=400,H=58;const mn=Math.min(...sparkD),mx=Math.max(...sparkD);const rng=mx-mn||1;
+  const pts=sparkD.map((v,i)=>[(i/(sparkD.length-1))*W,H-((v-mn)/rng)*(H-8)-4]);
+  const ld=pts.map((p,i)=>(i===0?`M${p[0]},${p[1]}`:`L${p[0]},${p[1]}`)).join(' ');
+  document.getElementById('spkLine').setAttribute('d',ld);
+  document.getElementById('spkArea').setAttribute('d',ld+` L${W},${H} L0,${H} Z`);
+  document.getElementById('spk-min').textContent=mn;document.getElementById('spk-max').textContent=mx;
+}
+
+/* ── Orchestrator ── */
+const API=window.location.origin;
+let logCnt=0;const ctrs={};let stData=[];
+const ICOS={'Parser Agent':'⚙️','Analyzer Agent':'🔍','Executor Agent':'⚡','Validator Agent':'✅','Summarizer Agent':'📋'};
+function fmtTs(iso){const d=new Date(iso);return d.toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});}
+function addLog(tag,cls,msg,ts){
+  const p=document.getElementById('logPanel');const e=p.querySelector('.log-empty');if(e)e.remove();
+  const el=document.createElement('div');el.className='le';
+  el.innerHTML=`<span class="le-ts">${fmtTs(ts)}</span><span class="le-tag ${cls}">${tag}</span><span class="le-msg">${msg}</span>`;
+  p.appendChild(el);p.scrollTop=p.scrollHeight;
+  logCnt++;document.getElementById('o-logcnt').textContent=logCnt+' events';document.getElementById('o-cnt').textContent=logCnt+' events';
+}
+function setLedger(d){
+  const cpu=d.cpu??100,mem=d.memory??100,tok=d.api_tokens??100;
+  document.getElementById('o-cpu').textContent=cpu+'%';document.getElementById('o-cpu-b').style.width=cpu+'%';
+  document.getElementById('o-mem').textContent=mem+'%';document.getElementById('o-mem-b').style.width=mem+'%';
+  document.getElementById('o-tok').textContent=tok+'%';document.getElementById('o-tok-b').style.width=tok+'%';
+}
+function upsertCtr(cid,agent,status){
+  const list=document.getElementById('containerList');let c=ctrs[cid];
+  if(!c){c=document.createElement('div');c.className='ctr-card';list.appendChild(c);ctrs[cid]=c;}
+  const run=status==='RUNNING';
+  c.innerHTML=`<div class="ctr-top"><span class="ctr-id">${cid}</span><span class="ctr-st ${run?'cs-run':'cs-done'}">${status}</span></div><div class="ctr-ag">${ICOS[agent]||'🤖'} ${agent}</div>`;
+}
+function rmCtr(cid){const c=ctrs[cid];if(c){c.style.opacity='.2';setTimeout(()=>{c.remove();delete ctrs[cid];},600);}}
+function renderSubs(){
+  const list=document.getElementById('subtaskList');list.innerHTML='';
+  stData.forEach(s=>{
+    const div=document.createElement('div');div.className='sc';div.id=`sc-${s.agent.replace(/\s/g,'_')}`;
+    const pc=s.priority>=8?'ph':s.priority>=6?'pm':'pl';
+    div.innerHTML=`<span class="sc-ico">${ICOS[s.agent]||'🤖'}</span><div class="sc-inf"><div class="sc-name">${s.agent}</div><div class="sc-role">${s.role}</div></div><span class="pchip ${pc}">P${s.priority}</span><span class="sdot" id="sd-${s.agent.replace(/\s/g,'_')}"></span>`;
+    list.appendChild(div);
+  });
+}
+function setAgSt(agent,st){
+  const k=agent.replace(/\s/g,'_');
+  const c=document.getElementById(`sc-${k}`);const d=document.getElementById(`sd-${k}`);if(!c||!d)return;
+  c.className='sc '+(st==='running'?'running':st==='done'?'done':'');
+  d.className='sdot '+(st==='running'?'running':st==='done'?'done':'');
+}
+function handleEv(ev){
+  const{type,data,ts}=ev;
+  switch(type){
+    case 'orch':       addLog('ORCH','tg-o',data.msg,ts);break;
+    case 'decomposed': stData=data.subtasks;renderSubs();addLog('ORCH','tg-o',`Decomposed → ${data.subtasks.length} subtasks (sorted by priority)`,ts);break;
+    case 'resource_bid':     addLog('BID','tg-b',`${data.agent} bids P${data.priority} → 20 CPU, 20 MEM [${data.cid}]`,ts);break;
+    case 'resource_granted': addLog('GRANT','tg-gr',`Resources granted → ${data.agent} [P${data.priority}]`,ts);break;
+    case 'ledger_update':    setLedger(data);break;
+    case 'container_start':  upsertCtr(data.cid,data.agent,'STARTING');addLog('CTR','tg-c',`Spinning up ${data.cid} for ${data.agent}…`,ts);break;
+    case 'container_ready':  upsertCtr(data.cid,data.agent,'RUNNING');setAgSt(data.agent,'running');addLog('CTR','tg-c',`${data.cid} RUNNING — isolated namespace`,ts);break;
+    case 'agent_executing':  addLog('EXEC','tg-e',`${data.agent} → "${data.task}"`,ts);break;
+    case 'agent_complete':   setAgSt(data.agent,'done');addLog('DONE','tg-d',`${data.agent} ✓  ${data.result}`,ts);break;
+    case 'container_terminated': rmCtr(data.cid);addLog('SYS','tg-s',`${data.cid} terminated. Resources released.`,ts);break;
+    case 'done':
+      addLog('DONE','tg-d',`✅ All ${data.agents} agents completed. Orchestration finished!`,ts);
+      const box=document.getElementById('finalResult');
+      box.innerHTML='<div class="res-wrap"><h3>✅ Orchestration Complete</h3>'+Object.entries(data.results).map(([a,r])=>`<div class="res-row2"><div class="res-ag">${ICOS[a]||''} ${a}</div><div class="res-txt">${r}</div></div>`).join('')+'</div>';
+      break;
+    case 'stream_end':
+      document.getElementById('runBtn').disabled=false;
+      document.getElementById('runBtn').textContent='▶ Run Orchestration';break;
+  }
+}
+async function submitTask(){
+  const task=document.getElementById('taskInput').value.trim();
+  if(!task){alert('Please enter a task description.');return;}
+  document.getElementById('runBtn').disabled=true;
+  document.getElementById('runBtn').textContent='⏳ Running…';
+  document.getElementById('subtaskList').innerHTML='';
+  document.getElementById('containerList').innerHTML='';
+  document.getElementById('finalResult').innerHTML='';
+  document.getElementById('logPanel').innerHTML='<div class="log-empty"><div class="log-big">⏳</div>Connecting to orchestrator backend…</div>';
+  document.getElementById('o-logcnt').textContent='0 events';document.getElementById('o-cnt').textContent='0 events';
+  logCnt=0;stData=[];Object.keys(ctrs).forEach(k=>delete ctrs[k]);
+  setLedger({cpu:100,memory:100,api_tokens:100});
+  let taskId;
+  try{
+    const r=await fetch(`${API}/api/submit`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({task})});
+    taskId=(await r.json()).task_id;
+  }catch(e){
+    document.getElementById('logPanel').innerHTML='<div class="log-empty"><div class="log-big">⚠️</div>Cannot reach backend.<br><span style="font-family:var(--mono);font-size:.65rem;color:var(--amber)">Run: python app.py</span></div>';
+    document.getElementById('runBtn').disabled=false;document.getElementById('runBtn').textContent='▶ Run Orchestration';return;
+  }
+  const es=new EventSource(`${API}/api/stream/${taskId}`);
+  es.onmessage=e=>{const ev=JSON.parse(e.data);handleEv(ev);if(ev.type==='stream_end')es.close();};
+  es.onerror=()=>{es.close();document.getElementById('runBtn').disabled=false;document.getElementById('runBtn').textContent='▶ Run Orchestration';};
+}
+document.getElementById('taskInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.ctrlKey)submitTask();});
+
+/* ── Agent Lab: integrated custom agent simulator ── */
+let labTasks=[
+  {id:"lab-t1",name:"Code Generator",priority:9,cpu:3,duration:2800,status:"pending",containerId:null,result:"generated optimized code"},
+  {id:"lab-t2",name:"QA Validator",priority:7,cpu:2,duration:2200,status:"pending",containerId:null,result:"tests passed with 98% confidence"},
+  {id:"lab-t3",name:"Deploy Engine",priority:8,cpu:2,duration:2000,status:"pending",containerId:null,result:"deployment package prepared successfully"}
+];
+let labNextId=100;
+const labTotalCPU=8;
+let labAvailableCPU=labTotalCPU;
+let labActiveTimers=[];
+let labRunning=false;
+let labHistory=[];
+function labEl(id){return document.getElementById(id);}
+function labTerm(message,type="info"){
+  const terminal=labEl("labTerminal"); if(!terminal)return;
+  const line=document.createElement("div");
+  line.className="lab-terminal-line";
+  const prefix=type==="error"?"⚠":type==="success"?"✓":">";
+  line.innerHTML=`${prefix} [${new Date().toLocaleTimeString()}] ${message}`;
+  terminal.appendChild(line);
+  terminal.scrollTop=terminal.scrollHeight;
+  if(terminal.children.length>70)terminal.removeChild(terminal.children[0]);
+}
+function labUpdateResources(){
+  labEl("labAvailCpu").textContent=labAvailableCPU.toFixed(1);
+  const pct=(labAvailableCPU/labTotalCPU)*100;
+  labEl("labCpuFill").style.width=pct+"%";
+}
+function labRenderTasks(){
+  const list=labEl("labTaskList"); if(!list)return;
+  const sorted=[...labTasks].sort((a,b)=>b.priority-a.priority);
+  list.innerHTML="";
+  sorted.forEach(t=>{
+    const div=document.createElement("div");
+    div.className=`lab-task ${t.status}`;
+    const st=t.status==="pending"?"⏳ Pending":t.status==="running"?"⚙ Running":"✅ Completed";
+    const ctr=t.containerId?` · ${t.containerId}`:"";
+    div.innerHTML=`<div class="lab-task-top"><span class="lab-task-name">${t.name}</span><span class="pchip ${t.priority>=8?"ph":t.priority>=6?"pm":"pl"}">P${t.priority}</span></div>
+      <div class="lab-task-meta">${t.cpu} vCPU · ${st}${ctr}</div>
+      <div class="lab-mini-track"><div class="lab-mini-fill"></div></div>`;
+    list.appendChild(div);
+  });
+  labEl("labTaskCount").textContent=`${labTasks.length} agents`;
+}
+function labRenderHistory(){
+  const h=labEl("labHistoryList"); if(!h)return;
+  if(labHistory.length===0){h.innerHTML="<div style='color:var(--dim);font-size:.72rem'>No completed agents yet.</div>";return;}
+  h.innerHTML=labHistory.slice(0,8).map(e=>`<div class="lab-history-item"><span>🤖 ${e.name}</span><span style="color:var(--green)">${e.result}</span><span style="font-family:var(--mono);color:var(--dim)">${e.timestamp}</span></div>`).join("");
+}
+function labRenderContainers(){
+  const list=labEl("labContainerList"); if(!list)return;
+  const running=labTasks.filter(t=>t.status==="running"&&t.containerId);
+  labEl("labContainerCount").textContent=`${running.length} running`;
+  labEl("labContainerCountNum").textContent=running.length;
+  if(running.length===0){
+    list.innerHTML="<div style='color:var(--dim);font-size:.72rem'>✨ No ephemeral containers active</div>";
+    return;
+  }
+  list.innerHTML=running.map(t=>`<div class="lab-container-chip">⬡ ${t.containerId} · ${t.name}</div>`).join("");
+}
+async function labExecuteAgent(task){
+  if(task.status!=="pending")return false;
+  if(task.cpu>labAvailableCPU){
+    labTerm(`${task.name} P${task.priority} waiting for ${task.cpu} CPU`,"info");
+    return false;
+  }
+  task.status="running";
+  labAvailableCPU-=task.cpu;
+  task.containerId=`ephem-${Date.now()}-${Math.floor(Math.random()*900)}`;
+  labUpdateResources(); labRenderTasks(); labRenderContainers();
+  labTerm(`Spawned ${task.containerId} for ${task.name} · allocated ${task.cpu} vCPU`,"success");
+  return new Promise(resolve=>{
+    const timer=setTimeout(()=>{
+      task.status="completed";
+      labAvailableCPU=Math.min(labTotalCPU,labAvailableCPU+task.cpu);
+      labTerm(`${task.name} finished. ${task.containerId} terminated → ${task.result}`,"success");
+      labHistory.unshift({name:task.name,result:task.result,timestamp:new Date().toLocaleTimeString()});
+      task.containerId=null;
+      labUpdateResources(); labRenderHistory(); labRenderTasks(); labRenderContainers();
+      labScheduleWaiting();
+      resolve();
+    },task.duration);
+    labActiveTimers.push(timer);
+  });
+}
+async function labScheduleWaiting(){
+  const pending=labTasks.filter(t=>t.status==="pending").sort((a,b)=>b.priority-a.priority);
+  for(const task of pending){
+    if(task.cpu<=labAvailableCPU&&task.status==="pending"){
+      await labExecuteAgent(task);
+      await new Promise(r=>setTimeout(r,40));
+      await labScheduleWaiting();
+      break;
+    }
+  }
+}
+async function labRunOrchestration(){
+  if(labRunning){labTerm("Orchestration already active. Reset first.","error");return;}
+  labActiveTimers.forEach(t=>clearTimeout(t)); labActiveTimers=[];
+  labRunning=true;
+  labEl("labDeployBtn").disabled=true;
+  labEl("labBiddingState").textContent="Priority Bidding Active";
+  labTerm("Orchestrator started: decomposition + priority-weighted bidding","info");
+  labTasks.forEach(t=>{t.status="pending";t.containerId=null;});
+  labAvailableCPU=labTotalCPU;
+  labUpdateResources(); labRenderTasks(); labRenderContainers();
+
+  const sorted=[...labTasks].sort((a,b)=>b.priority-a.priority);
+  let tempCpu=labAvailableCPU;
+  const initial=[];
+  sorted.forEach(t=>{
+    if(t.cpu<=tempCpu){initial.push(t);tempCpu-=t.cpu;}
+    else labTerm(`Bidding queue: ${t.name} P${t.priority} needs ${t.cpu} CPU, enqueued`,"info");
+  });
+  for(const t of initial){await labExecuteAgent(t);}
+  await labScheduleWaiting();
+  if(labTasks.every(t=>t.status==="completed")){
+    labTerm("All agents completed. Containers cleaned. Agent Lab ready.","success");
+    labEl("labBiddingState").textContent="Idle";
+  }else{
+    labTerm("Run finished with pending agents because of resource constraints.","info");
+    labEl("labBiddingState").textContent="Idle (partial)";
+  }
+  labRunning=false;
+  labEl("labDeployBtn").disabled=false;
+  labRenderContainers();
+}
+function labHardReset(){
+  labActiveTimers.forEach(t=>clearTimeout(t)); labActiveTimers=[];
+  labRunning=false;
+  labTasks.forEach(t=>{t.status="pending";t.containerId=null;});
+  labAvailableCPU=labTotalCPU;
+  labEl("labDeployBtn").disabled=false;
+  labEl("labBiddingState").textContent="Idle";
+  labUpdateResources(); labRenderTasks(); labRenderContainers();
+  labTerm("System reset: all containers terminated and ledger restored.","info");
+}
+function labAddAgent(){
+  const name=labEl("labAgentName").value.trim();
+  let priority=parseInt(labEl("labPriority").value,10);
+  let cpu=parseFloat(labEl("labCpuReq").value);
+  if(!name){labTerm("Agent name required.","error");return;}
+  if(Number.isNaN(priority))priority=5;
+  priority=Math.max(1,Math.min(10,priority));
+  if(Number.isNaN(cpu)||cpu<.5)cpu=1;
+  cpu=Math.max(.5,Math.min(5,cpu));
+  const task={id:`lab-cust-${labNextId++}`,name:`🤖 ${name}`,priority,cpu,duration:1800+Math.random()*2000,status:"pending",containerId:null,result:`${name} completed in isolated execution`};
+  labTasks.push(task);
+  labRenderTasks();
+  labTerm(`Added custom agent ${task.name} · P${priority}, ${cpu} CPU`,"info");
+  labEl("labAgentName").value="";
+}
+function initAgentLab(){
+  if(labEl("labDeployBtn")?.dataset.ready)return;
+  labEl("labDeployBtn").dataset.ready="1";
+  labEl("labDeployBtn").addEventListener("click",labRunOrchestration);
+  labEl("labResetBtn").addEventListener("click",labHardReset);
+  labEl("labAddAgentBtn").addEventListener("click",labAddAgent);
+  labEl("labAgentName").addEventListener("keydown",e=>{if(e.key==="Enter")labAddAgent();});
+  labUpdateResources(); labRenderTasks(); labRenderHistory(); labRenderContainers();
+  labTerm("Agent Lab ready · custom agents + local priority bidding loaded","success");
+}
+document.addEventListener("DOMContentLoaded",initAgentLab);
+
+</script>
+</body>
+</html>
